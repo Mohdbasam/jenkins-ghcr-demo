@@ -113,7 +113,7 @@ Jenkins
             echo 'Pipeline failed!'
 
             mail(
-                to: 'your-email@example.com',
+                to: 'muhammedbasamkmail4u@gmail.com',
                 subject: "FAILED: ${JOB_NAME} #${BUILD_NUMBER}",
                 body: """
 Hello,
