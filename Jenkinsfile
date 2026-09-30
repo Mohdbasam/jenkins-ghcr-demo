@@ -86,7 +86,7 @@ pipeline {
             echo 'Pipeline completed successfully!'
 
             mail(
-                to: 'your-email@example.com',
+                to: 'muhammedbasamkmail4u@gmail.com',
                 subject: "SUCCESS: ${JOB_NAME} #${BUILD_NUMBER}",
                 body: """
 Hello,
