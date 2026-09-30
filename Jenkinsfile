@@ -2,10 +2,14 @@ pipeline {
 
     agent any
 
+    tools {
+        jdk 'jdk17'
+        maven 'maven-3.9'
+    }
+
     environment {
         IMAGE_NAME = "ghcr.io/mohdbasam/jenkins-ghcr-demo"
         IMAGE_TAG = "build-${BUILD_NUMBER}"
-        GHCR_CREDENTIALS = credentials('ghcr-credentials')
     }
 
     stages {
@@ -23,6 +27,8 @@ pipeline {
             steps {
                 echo 'Running automated tests...'
 
+                sh 'java -version'
+                sh 'mvn -version'
                 sh 'mvn test'
             }
         }
@@ -39,11 +45,7 @@ pipeline {
             steps {
                 echo 'Building Docker image...'
 
-                sh """
-                    docker build \
-                    -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                    .
-                """
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
@@ -51,31 +53,37 @@ pipeline {
             steps {
                 echo 'Creating latest tag...'
 
-                sh """
-                    docker tag \
-                    ${IMAGE_NAME}:${IMAGE_TAG} \
-                    ${IMAGE_NAME}:latest
-                """
+                sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
             }
         }
 
         stage('Push Image to GHCR') {
             steps {
+
                 echo 'Logging into GitHub Container Registry...'
 
-                sh """
-                    echo '${GHCR_CREDENTIALS_PSW}' | \
-                    docker login ghcr.io \
-                    -u '${GHCR_CREDENTIALS_USR}' \
-                    --password-stdin
-                """
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'ghcr-credentials',
+                        usernameVariable: 'GHCR_USER',
+                        passwordVariable: 'GHCR_TOKEN'
+                    )
+                ]) {
 
-                echo 'Pushing Docker image to GHCR...'
+                    sh '''
+                        echo "$GHCR_TOKEN" | docker login ghcr.io \
+                            -u "$GHCR_USER" \
+                            --password-stdin
+                    '''
 
-                sh """
-                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                    docker push ${IMAGE_NAME}:latest
-                """
+                    echo 'Pushing build image to GHCR...'
+
+                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+
+                    echo 'Pushing latest image to GHCR...'
+
+                    sh "docker push ${IMAGE_NAME}:latest"
+                }
             }
         }
     }
@@ -100,8 +108,11 @@ Status: SUCCESS
 Docker Image:
 ${IMAGE_NAME}:${IMAGE_TAG}
 
+Latest Image:
+${IMAGE_NAME}:latest
+
 GHCR:
-https://ghcr.io/mohdbasam/jenkins-ghcr-demo
+ghcr.io/mohdbasam/jenkins-ghcr-demo
 
 Regards,
 Jenkins
